@@ -1,0 +1,74 @@
+# GitHub Hot Picks 配置文件
+# 复制此文件为 config.yaml 并填入你的 API Key
+
+# LLM 提供商选择：openai / anthropic
+llm:
+  provider: "openai"
+  model: "gpt-4o"
+  api_key: ""           # 填入你的 OpenAI API Key
+  # 如果使用 Anthropic：
+  # provider: "anthropic"
+  # model: "claude-sonnet-4-20250514"
+  # api_key: ""         # 填入你的 Anthropic API Key
+
+# GitHub API 配置（可选，提高 trending 抓取稳定性）
+github:
+  token: ""             # GitHub Personal Access Token（可选，无token也能运行）
+
+# 输出配置
+output:
+  dir: "output"
+  filename_template: "GitHub热点-{date}.md"
+
+# 数据源配置
+sources:
+  github_trending:
+    enabled: true
+    since: "daily"              # daily / weekly / monthly
+    languages:                   # 关注的编程语言（空列表=全部语言）
+      - ""
+      - "python"
+      - "javascript"
+      - "typescript"
+      - "rust"
+      - "go"
+
+  openithubs_weekly:
+    enabled: true
+    repo: "OpenGithubs/weekly"
+
+  github_daily:
+    enabled: true
+    repo: "GitHubDaily/GitHubDaily"
+
+  ossnav:
+    enabled: true
+    repo: "maxiaobang7/ossnav"
+
+  hackernews:
+    enabled: true
+    top_n: 30
+
+# 报告板块配置
+sections:
+  - id: "ai_coding_agent"
+    title: "AI 编码智能体"
+    subtitle: "近期最火方向"
+    min_items: 2
+    max_items: 4
+
+  - id: "ai_app_tool"
+    title: "AI 应用与工具"
+    min_items: 5
+    max_items: 7
+
+  - id: "dev_efficiency"
+    title: "开发效率工具"
+    min_items: 3
+    max_items: 4
+
+  - id: "ossnav_pick"
+    title: "实用开源软件"
+    subtitle: "OSSNAV 精选"
+    min_items: 3
+    max_items: 4

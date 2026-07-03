@@ -1,0 +1,26 @@
+# 保护 API Key 和个人配置
+config.yaml
+*.env
+.env
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# 输出文件（本地生成，不需要同步）
+output/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
