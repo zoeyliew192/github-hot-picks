@@ -14,6 +14,11 @@ HEADERS = {
 }
 
 
+def parse_period_stars(text):
+    match = re.search(r"([\d,]+)\s+stars?\s+(?:today|this week|this month)", text or "", re.I)
+    return int(match.group(1).replace(",", "")) if match else 0
+
+
 def scrape_trending(since="daily", language="", github_token=None):
     """抓取 GitHub Trending 页面
 
@@ -33,6 +38,7 @@ def scrape_trending(since="daily", language="", github_token=None):
     projects = []
     try:
         resp = requests.get(url, headers=headers, timeout=20)
+        resp.raise_for_status()
         resp.encoding = "utf-8"
         soup = BeautifulSoup(resp.text, "html.parser")
 
@@ -78,9 +84,7 @@ def scrape_trending(since="daily", language="", github_token=None):
                     if match:
                         today_text = match.group(1)
 
-                today_stars = 0
-                if today_text:
-                    today_stars = int(today_text.replace(",", "")) if today_text.replace(",", "").isdigit() else 0
+                today_stars = parse_period_stars(today_text or article.get_text(" ", strip=True))
 
                 projects.append({
                     "name": name,

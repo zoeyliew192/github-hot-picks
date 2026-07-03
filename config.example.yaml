@@ -49,6 +49,12 @@ sources:
     enabled: true
     top_n: 30
 
+  # 推荐源是长期目录，不等同于“今日热点”。程序每天只选择未见过的项目。
+  recommend_selection:
+    max_per_source: 10
+    state_file: ".state/seen-projects.json"
+    enrich_metadata: true
+
 # 报告板块配置
 sections:
   - id: "ai_coding_agent"

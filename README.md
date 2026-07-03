@@ -5,7 +5,7 @@
 ## 功能
 
 - 🔥 自动从 **GitHub Trending** 抓取多语言当日/本周热门项目
-- 📚 自动从 **OpenGithubs/weekly、GitHubDaily、OSSNAV** 三大推荐源获取精选项目
+- 📚 从 **OpenGithubs/weekly、GitHubDaily、OSSNAV** 三大长期目录增量发现未见项目
 - 📡 自动从 **HackerNews** 抓取 GitHub 相关热门帖子
 - 🤖 调用 **OpenAI / Anthropic** LLM 将原始项目数据分类精炼为4板块日报
 - 📝 输出标准 Markdown 文件，可直接发布到知乎、公众号等平台
@@ -28,7 +28,7 @@
 > ### 5. strix — 用AI替你做渗透测试，日增2,137星，企业安全团队的效率神器
 > ### 13. PeerTube — 去中心化视频平台碾压HN全场，516分230评论，让创作者摆脱平台依赖
 
-每个项目标题行即 hook，有观点有冲击力——读者扫一眼标题就知道"这项目为什么值得关注"。完整样例见 [GitHub热点-2026-07-03.md](output/GitHub热点-2026-07-03.md)。
+每个项目标题行即 hook，读者扫一眼标题就知道“为什么值得关注”。运行后可在本地 `output/GitHub热点-YYYY-MM-DD.md` 查看完整结果；输出默认不提交到 Git。
 
 ## 快速开始
 
@@ -44,7 +44,22 @@ pip install -r requirements.txt
 cp config.example.yaml config.yaml
 ```
 
-编辑 `config.yaml`，填入你的 LLM API Key：
+推荐通过 environment variable 提供 API Key，避免密钥进入配置文件：
+
+```bash
+export OPENAI_API_KEY="sk-xxx"
+# 或 export ANTHROPIC_API_KEY="..."
+# 可选：export GITHUB_TOKEN="github_pat_xxx"
+```
+
+Windows PowerShell：
+
+```powershell
+$env:OPENAI_API_KEY = "sk-xxx"
+$env:GITHUB_TOKEN = "github_pat_xxx"  # 可选
+```
+
+也可以编辑本地 `config.yaml`（该文件已被 `.gitignore` 排除）：
 
 ```yaml
 llm:
@@ -115,6 +130,8 @@ github-hot-picks/
 schtasks /create /tn "GitHub热点" /tr "python C:\path\to\github-hot-picks\main.py" /sc daily /st 18:00
 ```
 
+程序会将 `config.yaml`、`output/` 和 `.state/` 等相对路径固定解析到仓库根目录，因此 Task Scheduler 从其他 working directory 启动也不会写错位置。
+
 ### 使用 AI 编码助手自动化
 
 搭配 Cursor、Copilot、Codex、WorkBuddy 等 AI 编码助手，将项目 prompt 作为自动化指令，设定每天定时执行即可。
@@ -128,6 +145,38 @@ schtasks /create /tn "GitHub热点" /tr "python C:\path\to\github-hot-picks\main
 3. `python main.py` 即可生成报告
 
 无需任何特定平台环境，只需一个 LLM API Key。
+
+## 推荐源的增量机制
+
+OpenGithubs、GitHubDaily 和 OSSNAV 是长期目录，不代表项目都在当天发布。程序会：
+
+1. 从每个目录最多选择 `max_per_source` 个未见项目；
+2. 在成功生成报告后写入 `.state/seen-projects.json`；
+3. 后续运行跳过已经使用过的项目。
+
+候选选出后，程序会通过 GitHub API 补充 description、stars、language 和最近 push 时间，避免让 LLM 根据项目名猜测事实。可通过 `enrich_metadata: false` 关闭。
+
+`--dry-run` 不修改 seen state，便于安全验证。GitHub Trending 和 HackerNews 仍作为当日热度信号处理。
+
+## 运行状态与失败监控
+
+每次运行都会生成 `output/run-status-YYYY-MM-DD.json`，记录 `success`、`success_with_warnings` 或 `failed`、来源数量、warning/error、运行时间和最终输出文件。
+
+进程使用可靠 exit code：`0` 表示成功，非 `0` 表示配置、采集或 LLM 阶段失败。Windows Task Scheduler、cron 或其他调度器可据此触发告警。
+
+如设置 `RUN_STATUS_WEBHOOK_URL`，程序会在运行结束后以 JSON POST 状态摘要。Webhook 失败不会覆盖主任务结果。
+
+## 测试
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+测试不需要 API Key，也不会调用 LLM。
+
+## 是否需要 GitHub Actions
+
+GitHub Actions 不是运行本项目的必要条件。如果 Windows Task Scheduler 已稳定运行，可继续使用；只有需要电脑关机后仍由云端定时生成时，才需要增加 Actions workflow，并在 GitHub Secrets 中配置 API Key。
 
 ## License
 

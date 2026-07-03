@@ -10,9 +10,12 @@ __pycache__/
 dist/
 build/
 *.egg
+.venv/
+.pytest_cache/
 
 # 输出文件（本地生成，不需要同步）
 output/
+.state/
 
 # IDE
 .vscode/

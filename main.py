@@ -17,109 +17,51 @@
 
 import argparse
 import os
+from pathlib import Path
 import sys
 from datetime import datetime
+
+import yaml
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 from fetcher_trending import scrape_trending_all_languages
-from fetcher_recommend import fetch_all_recommend_sources
+from fetcher_recommend import fetch_all_recommend_sources, load_seen_projects, save_seen_projects
 from fetcher_hackernews import fetch_github_related_stories
 from generator import generate_report
+from run_status import RunStatus
+
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+
+
+def resolve_project_path(path):
+    resolved = Path(path).expanduser()
+    return resolved if resolved.is_absolute() else PROJECT_ROOT / resolved
 
 
 def load_config(config_path):
-    """加载 YAML 配置文件"""
-    config = {}
+    """Load YAML config and merge it onto safe defaults."""
+    config_path = resolve_project_path(config_path)
     if not os.path.exists(config_path):
         print(f"[配置] 未找到 {config_path}，使用默认配置")
         return default_config()
 
     with open(config_path, "r", encoding="utf-8") as f:
-        content = f.read()
+        loaded = yaml.safe_load(f) or {}
+    if not isinstance(loaded, dict):
+        raise ValueError("配置文件顶层必须是 YAML mapping")
+    return deep_merge(default_config(), loaded)
 
-    # 简易 YAML 解析
-    current_section = None
-    current_subsection = None
-    list_key = None
-    list_items = []
 
-    for line in content.split("\n"):
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
-            continue
-
-        # 处理列表项
-        if stripped.startswith("- ") and list_key:
-            item = stripped[2:].strip()
-            if item.startswith('"') and item.endswith('"'):
-                item = item[1:-1]
-            list_items.append(item)
-            continue
-
-        # 重置列表收集
-        if list_key and list_items:
-            if current_subsection:
-                config[current_section][current_subsection][list_key] = list_items
-            elif current_section:
-                config[current_section][list_key] = list_items
-            list_key = None
-            list_items = []
-
-        # 键值行
-        if ":" in stripped and not stripped.startswith("-"):
-            key, value = stripped.split(":", 1)
-            key = key.strip()
-            value = value.strip()
-
-            if not value:
-                # 可能是列表开始
-                list_key = key
-                list_items = []
-                continue
-
-            # 解析值类型
-            if value.startswith('"') and value.endswith('"'):
-                value = value[1:-1]
-            elif value.lower() == "true":
-                value = True
-            elif value.lower() == "false":
-                value = False
-            elif value.isdigit():
-                value = int(value)
-            elif value.replace(".", "", 1).isdigit():
-                value = float(value)
-
-            # 嵌套键 (如 github.token)
-            if "." in key:
-                parts = key.split(".", 1)
-                if parts[0] not in config:
-                    config[parts[0]] = {}
-                if not isinstance(config[parts[0]], dict):
-                    config[parts[0]] = {}
-                config[parts[0]][parts[1]] = value
-            elif current_section:
-                if current_subsection:
-                    if current_section not in config:
-                        config[current_section] = {}
-                    if current_subsection not in config[current_section]:
-                        config[current_section][current_subsection] = {}
-                    config[current_section][current_subsection][key] = value
-                else:
-                    if current_section not in config:
-                        config[current_section] = {}
-                    config[current_section][key] = value
-            else:
-                config[key] = value
-
-    # 处理末尾列表
-    if list_key and list_items:
-        if current_section:
-            if current_section not in config:
-                config[current_section] = {}
-            config[current_section][list_key] = list_items
-
-    return config
+def deep_merge(base, override):
+    result = dict(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(result.get(key), dict):
+            result[key] = deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
 
 
 def default_config():
@@ -137,33 +79,65 @@ def default_config():
             "dir": "output",
             "filename_template": "GitHub热点-{date}.md",
         },
+        "sources": {
+            "github_trending": {"enabled": True, "since": "daily", "languages": [""]},
+            "hackernews": {"enabled": True, "top_n": 30},
+            "recommend_selection": {
+                "max_per_source": 10,
+                "state_file": ".state/seen-projects.json",
+                "enrich_metadata": True,
+            },
+        },
     }
 
 
-def collect_data(config):
+def collect_data(config, status):
     """采集所有数据源"""
     raw_data = {}
-    github_token = config.get("github", {}).get("token", "")
+    github_token = os.environ.get("GITHUB_TOKEN") or config.get("github", {}).get("token", "")
+    sources = config.get("sources", {})
 
     # 1. GitHub Trending
     print("[采集] 正在抓取 GitHub Trending...")
-    languages = config.get("sources", {}).get("github_trending", {}).get("languages", [""])
-    since = config.get("sources", {}).get("github_trending", {}).get("since", "daily")
-    trending = scrape_trending_all_languages(since=since, languages=languages, github_token=github_token)
+    trending_config = sources.get("github_trending", {})
+    languages = trending_config.get("languages", [""])
+    since = trending_config.get("since", "daily")
+    trending_enabled = trending_config.get("enabled", True)
+    trending = scrape_trending_all_languages(since=since, languages=languages, github_token=github_token) if trending_enabled else []
     raw_data["trending"] = trending
+    if trending_enabled:
+        status.record_source("github_trending", len(trending))
     print(f"[采集] GitHub Trending: {len(trending)} 个项目")
 
     # 2. 推荐源
     print("[采集] 正在抓取推荐源...")
-    recommend = fetch_all_recommend_sources(github_token)
+    selection = sources.get("recommend_selection", {})
+    state_file = str(resolve_project_path(selection.get("state_file", ".state/seen-projects.json")))
+    seen_projects = load_seen_projects(state_file)
+    recommend = fetch_all_recommend_sources(
+        github_token,
+        source_config=sources,
+        seen_projects=seen_projects,
+        max_per_source=int(selection.get("max_per_source", 10)),
+        enrich_metadata=selection.get("enrich_metadata", True),
+    )
     raw_data["recommend"] = recommend
+    raw_data["recommend_state_file"] = state_file
+    status.record_source("recommend", len(recommend))
+    missing_metadata = sum(1 for project in recommend if "total_stars" not in project)
+    if missing_metadata:
+        status.warn("github_metadata", f"{missing_metadata} recommendation projects lack API metadata")
     print(f"[采集] 推荐源: {len(recommend)} 个项目")
 
     # 3. HackerNews
     print("[采集] 正在抓取 HackerNews GitHub 相关帖子...")
-    top_n = config.get("sources", {}).get("hackernews", {}).get("top_n", 30)
-    hn_stories = fetch_github_related_stories(top_n=top_n)
+    hn_config = sources.get("hackernews", {})
+    top_n = hn_config.get("top_n", 30)
+    hn_enabled = hn_config.get("enabled", True)
+    hn_stories = fetch_github_related_stories(top_n=top_n) if hn_enabled else []
     raw_data["hackernews"] = hn_stories
+    if hn_enabled:
+        status.record_source("hackernews", len(hn_stories))
     print(f"[采集] HackerNews: {len(hn_stories)} 条 GitHub 相关帖子")
 
     return raw_data
@@ -171,7 +145,7 @@ def collect_data(config):
 
 def save_report(content, date_str, config):
     """保存生成的报告到文件"""
-    output_dir = config.get("output", {}).get("dir", "output")
+    output_dir = resolve_project_path(config.get("output", {}).get("dir", "output"))
     filename_template = config.get("output", {}).get("filename_template", "GitHub热点-{date}.md")
     filename = filename_template.replace("{date}", date_str)
 
@@ -193,41 +167,95 @@ def main():
     args = parser.parse_args()
 
     date_str = args.date or datetime.now().strftime("%Y-%m-%d")
-    config = load_config(args.config)
+    try:
+        config = load_config(args.config)
+    except Exception as exc:
+        status = RunStatus("github-hot-picks", date_str)
+        status.error("config", exc)
+        status.finish(False)
+        status.write(str(PROJECT_ROOT / "output"))
+        status.notify_webhook()
+        print(f"[错误] 配置加载失败: {exc}")
+        return 2
+
+    status = RunStatus("github-hot-picks", date_str)
+    output_dir = str(resolve_project_path(config.get("output", {}).get("dir", "output")))
+
+    provider = config.get("llm", {}).get("provider", "openai")
+    env_name = "ANTHROPIC_API_KEY" if provider == "anthropic" else "OPENAI_API_KEY"
+    api_key = os.environ.get(env_name) or config.get("llm", {}).get("api_key", "")
+    config["llm"]["api_key"] = api_key
+    if not args.dry_run and not api_key:
+        print("[错误] 未配置 LLM API Key！请编辑 config.yaml 或设置 environment variable")
+        print("  支持的提供商: openai / anthropic")
+        print(f"  当前需要: {env_name}")
+        status.error("llm", f"missing {env_name}")
+        status.finish(False)
+        print(f"[监控] 运行状态: {status.write(output_dir)}")
+        status.notify_webhook()
+        return 2
 
     # Step 1: 采集数据
-    raw_data = collect_data(config)
+    try:
+        raw_data = collect_data(config, status)
+    except Exception as exc:
+        status.error("collection", exc)
+        status.finish(False)
+        status.write(output_dir)
+        status.notify_webhook()
+        print(f"[错误] 采集阶段失败: {exc}")
+        return 3
 
     if args.dry_run:
         print("\n[Dry Run] 仅采集数据，跳过生成")
         print(f"  GitHub Trending: {len(raw_data.get('trending', []))} 个")
         print(f"  推荐源项目: {len(raw_data.get('recommend', []))} 个")
         print(f"  HackerNews: {len(raw_data.get('hackernews', []))} 条")
-        return
+        success = any(status.source_counts.values())
+        status.finish(success)
+        print(f"[监控] 运行状态: {status.write(output_dir)}")
+        status.notify_webhook()
+        return 0 if success else 3
 
     # Step 2: 检查 API Key
-    api_key = config.get("llm", {}).get("api_key", "")
-    if not api_key:
-        print("[错误] 未配置 LLM API Key！请编辑 config.yaml 填入 api_key")
-        print("  支持的提供商: openai / anthropic")
-        print("  配置文件位置: config.yaml（参考 config.example.yaml）")
-        sys.exit(1)
-
     # Step 3: LLM 生成报告
     print("[生成] 正在调用 LLM 生成报告...")
     try:
         report_content = generate_report(raw_data, date_str, config)
     except Exception as e:
         print(f"[错误] LLM 生成失败: {e}")
-        sys.exit(1)
+        status.error("llm", e)
+        status.finish(False)
+        print(f"[监控] 运行状态: {status.write(output_dir)}")
+        status.notify_webhook()
+        return 4
 
     # Step 4: 保存文件
-    filepath = save_report(report_content, date_str, config)
+    try:
+        filepath = save_report(report_content, date_str, config)
+    except Exception as exc:
+        status.error("output", exc)
+        status.finish(False)
+        print(f"[监控] 运行状态: {status.write(output_dir)}")
+        status.notify_webhook()
+        print(f"[错误] 输出写入失败: {exc}")
+        return 5
+    try:
+        save_seen_projects(
+            raw_data.get("recommend_state_file", ".state/seen-projects.json"),
+            [project.get("full_name", "") for project in raw_data.get("recommend", [])],
+        )
+    except Exception as exc:
+        status.warn("recommend_state", exc)
+    status.finish(True, filepath)
+    print(f"[监控] 运行状态: {status.write(output_dir)}")
+    status.notify_webhook()
 
     print(f"\n✅ GitHub 热点精选生成完成！")
     print(f"   文件: {filepath}")
     print(f"   日期: {date_str}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
