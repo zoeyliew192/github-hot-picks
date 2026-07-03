@@ -8,7 +8,7 @@
 - 📚 自动从 **OpenGithubs/weekly、GitHubDaily、OSSNAV** 三大推荐源获取精选项目
 - 📡 自动从 **HackerNews** 抓取 GitHub 相关热门帖子
 - 🤖 调用 **OpenAI / Anthropic** LLM 将原始项目数据分类精炼为4板块日报
-- 📝 输出标准 Markdown 文件，可直接发布到掘金、公众号等平台
+- 📝 输出标准 Markdown 文件，可直接发布到知乎、公众号等平台
 
 ## 报告板块结构
 
@@ -115,9 +115,9 @@ github-hot-picks/
 schtasks /create /tn "GitHub热点" /tr "python C:\path\to\github-hot-picks\main.py" /sc daily /st 18:00
 ```
 
-### 使用 WorkBuddy 自动化
+### 使用 AI 编码助手自动化
 
-在 WorkBuddy 中创建自动化任务，设定每天 18:00 执行。
+搭配 Cursor、Copilot、Codex、WorkBuddy 等 AI 编码助手，将项目 prompt 作为自动化指令，设定每天定时执行即可。
 
 ## 分享给他人
 
@@ -127,7 +127,7 @@ schtasks /create /tn "GitHub热点" /tr "python C:\path\to\github-hot-picks\main
 2. 填入自己的 LLM API Key
 3. `python main.py` 即可生成报告
 
-无需 WorkBuddy 环境，无需额外账号，只需一个 LLM API Key。
+无需任何特定平台环境，只需一个 LLM API Key。
 
 ## License
 
