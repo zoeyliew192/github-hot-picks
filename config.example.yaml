@@ -1,7 +1,13 @@
-# GitHub Hot Picks 配置文件
-# 复制此文件为 config.yaml 并填入你的 API Key
+# GitHub Hot Picks 可选配置
+# 复制为 config.yaml 后按需覆盖默认值；只有 engine=api 时才需要 LLM API Key。
 
-# LLM 提供商选择：openai / anthropic
+# 默认使用本机已登录的 Codex，不需要 API Key。
+runtime:
+  engine: "codex"              # codex / api
+  codex_command: "codex"
+  input_dir: "input"
+
+# 可选 API fallback，仅在 runtime.engine=api 时使用。
 llm:
   provider: "openai"
   model: "gpt-4o"

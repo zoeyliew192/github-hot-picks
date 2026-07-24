@@ -15,6 +15,8 @@ import requests
 class RunStatus:
     project: str
     date: str
+    engine: str = ""
+    input_file: str = ""
     started_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     finished_at: str = ""
     source_counts: dict = field(default_factory=dict)
