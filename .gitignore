@@ -15,6 +15,7 @@ build/
 
 # 输出文件（本地生成，不需要同步）
 output/
+input/
 .state/
 
 # IDE
