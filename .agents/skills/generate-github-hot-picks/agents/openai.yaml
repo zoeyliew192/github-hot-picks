@@ -1,4 +1,4 @@
 interface:
-  display_name: "Generate GitHub Hot Picks"
-  short_description: "从采集元数据生成、校验并保存每日 GitHub 项目精选报告"
-  default_prompt: "Use $generate-github-hot-picks to collect, generate, and validate today’s GitHub hot picks."
+  display_name: "GitHub Hot Picks for Builders"
+  short_description: "筛选值得试用的 GitHub 项目，并生成适合个人任务的追问 Prompt"
+  default_prompt: "Use $generate-github-hot-picks to generate and validate today’s sourced project brief, then include the personalized trial-list prompt."

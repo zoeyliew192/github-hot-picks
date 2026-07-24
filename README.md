@@ -1,8 +1,24 @@
 # github-hot-picks 🔥
 
-> Agent-native GitHub 热点精选：Python 负责采集与校验，Codex、Antigravity、Claude Code 等本地 Agent 负责编辑生成。默认不需要 OpenAI/Anthropic API Key。
+> 给没时间每天刷 Trending、但想找到真正值得试用的开源工具的人。每天获得一份有数据边界的中文 GitHub 精选，再用内置追问 Prompt 按你的角色、工作流和技术门槛筛出最值得测试的项目。
 
 [English](README.en.md) · **简体中文**
+
+## 适合谁
+
+- 正在使用 AI 工具的独立开发者、创业者、产品人和高行动力业务操盘者。
+- 想发现 Coding Agent、AI 应用、开发效率工具和实用开源软件，但不想自己翻多个榜单的人。
+- 希望区分“今天有热度”和“长期目录发现”，并让 Agent 根据自己的能力与任务做二次筛选的人。
+
+它不是 GitHub Trending 镜像、实时排行榜或所有新仓库的完整索引，也不会仅凭项目名称补写能力和性能。
+
+## 你每天得到什么
+
+1. 一份从 Trending、Hacker News 与长期推荐目录中筛选的中文项目简报。
+2. 每个项目可追溯的 stars、HN score、语言、更新时间或来源说明；没有的数据不猜测。
+3. 报告末尾的个性化追问 Prompt：填入角色、当前任务、技术熟悉度和可投入时间，让 Agent 推荐 3—5 个最值得试用的项目与最小验证步骤。
+
+报告保持四个稳定板块，方便连续观察；是否适合你，在报告生成后再判断。
 
 ## Architecture
 
@@ -98,6 +114,10 @@ output/run-status-YYYY-MM-DD.json
 ```
 
 只有报告生成并通过校验后，推荐目录项目才会写入 `.state/seen-projects.json`。`input/`、`output/`、`.state/`、`config.yaml` 和密钥文件默认不提交 Git。
+
+## 用报告继续提问
+
+每份新生成的报告末尾都会附一个可复制 Prompt。填写你的角色、当前任务、技术熟悉度、运行环境和可投入时间后，Agent 会优先推荐少量真正适合你的项目，说明试用成本、风险和第一步，同时明确哪些热门项目可以暂时跳过。
 
 ## 配置
 

@@ -1,8 +1,24 @@
 # github-hot-picks 🔥
 
-> An agent-native GitHub discovery brief: Python collects and validates repository evidence, while Codex or another local coding agent performs editorial selection and writing. The default workflow does not require an OpenAI or Anthropic API key.
+> For people who cannot spend every day scanning Trending but still want open-source tools worth testing. Get a sourced Chinese GitHub brief, then use the built-in follow-up prompt to filter projects for your role, workflow, and technical comfort.
 
 **English** · [简体中文](README.md)
+
+## Who it is for
+
+- Independent developers, founders, product people, and high-agency operators who actively use AI tools.
+- Readers looking for coding agents, AI applications, developer productivity tools, and practical open source without scanning several feeds.
+- People who want daily traction separated from long-running catalog discovery and a second-pass recommendation from their own agent.
+
+This is not a GitHub Trending mirror, real-time leaderboard, or complete index of every new repository. It never invents capabilities or performance from a project name.
+
+## What you get
+
+1. A Chinese project brief selected from Trending, Hacker News, and long-running recommendation catalogs.
+2. Traceable stars, HN scores, languages, update times, or source labels when present; missing data is omitted rather than guessed.
+3. A reusable prompt at the end of each report. Add your role, current task, technical comfort, environment, and available time to identify the 3–5 projects most worth testing.
+
+The four report sections remain stable for longitudinal comparison. Personal fit is evaluated after the shared report is generated.
 
 ## Architecture
 
@@ -92,6 +108,10 @@ output/run-status-YYYY-MM-DD.json
 ```
 
 `input/`, `output/`, `.state/`, `config.yaml`, virtual environments, and credential files are ignored by Git.
+
+## Continue with your own questions
+
+Every newly generated report ends with a copyable prompt. Fill in your role, current task, technical comfort, environment, and available time, then ask an agent to recommend a small number of relevant projects, explain trial cost and risk, propose a first test, and mark popular projects you can safely skip.
 
 ## Security boundary
 

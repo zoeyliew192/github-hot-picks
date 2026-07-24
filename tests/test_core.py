@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 import main
 from agent_runtime import load_input_packet, run_codex_skill, save_input_packet, validate_markdown_report
+from generator import build_user_prompt
 from fetcher_recommend import (
     load_seen_projects,
     parse_github_links_from_markdown,
@@ -112,6 +113,16 @@ class CoreTests(unittest.TestCase):
             self.assertIn("report still contains template placeholders", errors)
         finally:
             os.unlink(path)
+
+    def test_report_workflow_includes_personalized_trial_prompt(self):
+        template = (ROOT / "templates" / "github_hot_picks.md").read_text(encoding="utf-8")
+        self.assertIn("把热点变成你的试用清单", template)
+        self.assertIn("我的技术熟悉度是：", template)
+        self.assertIn("30 分钟内可完成的最小验证", template)
+
+        prompt = build_user_prompt({}, "2026-07-03")
+        self.assertIn("把热点变成你的试用清单", prompt)
+        self.assertIn("不替读者预设技术能力或当前任务", prompt)
 
     def test_codex_engine_does_not_require_api_key(self):
         with tempfile.TemporaryDirectory() as directory:

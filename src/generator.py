@@ -42,6 +42,7 @@ def build_user_prompt(raw_data, date_str):
 5. 开头写一段介绍，区分当日热度源（GitHub Trending、HackerNews）与长期目录增量发现（OpenGithubs/weekly、GitHubDaily、OSSNAV）
 6. 最后写「今日趋势总结」，提炼3个趋势方向
 7. 结尾附信息源链接和分享引导
+8. 分享引导之后附上 `templates/github_hot_picks.md` 中的「把热点变成你的试用清单（可选）」追问 Prompt；它不属于四个项目板块，也不替读者预设技术能力或当前任务
 
 ## 原始数据
 
